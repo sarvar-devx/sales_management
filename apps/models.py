@@ -49,10 +49,19 @@ class Product(TimeBaseModel):
 
 
 class Order(TimeBaseModel):
+    PRICE_TYPE_CHOICES = (
+        ('sales', 'Sales price'),
+        ('kaspi', 'Kaspi price'),
+    )
     product = ForeignKey("apps.Product", CASCADE)
     quantity = PositiveIntegerField()
     deadline = DateTimeField()
-    price = PositiveIntegerField()
+    price_type = CharField(
+        max_length=10,
+        choices=PRICE_TYPE_CHOICES,
+        verbose_name="Price type"
+    )
+    price = PositiveIntegerField(editable=False)
 
     def __str__(self):
         return self.product.name
