@@ -32,6 +32,9 @@ class User(AbstractUser):
 class Category(Model):
     name = CharField(max_length=255)
 
+    def __str__(self):
+        return self.name
+
 
 class Product(TimeBaseModel):
     name = CharField(max_length=255)
@@ -39,6 +42,10 @@ class Product(TimeBaseModel):
     sales_price = PositiveIntegerField()
     kaspi_price = PositiveIntegerField()
     category = ForeignKey("apps.Category", CASCADE)
+    quantity = PositiveIntegerField()
+
+    def __str__(self):
+        return self.name
 
 
 class Order(TimeBaseModel):
@@ -46,3 +53,6 @@ class Order(TimeBaseModel):
     quantity = PositiveIntegerField()
     deadline = DateTimeField()
     price = PositiveIntegerField()
+
+    def __str__(self):
+        return self.product.name
