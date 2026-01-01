@@ -40,7 +40,7 @@ class OrderModelAdmin(ModelAdmin):
 
         if obj.quantity > obj.product.quantity:
             messages.warning(request,
-                             f"Product quantity yetarli emas! Hozir {obj.product.quantity} ta mavjud. Quantity kamaytirilmadi."
+                             f"Количество товара недостаточно! В настоящее время доступно {obj.product.quantity}. Количество не уменьшилось."
                              )
             self._order_not_created = True
             return

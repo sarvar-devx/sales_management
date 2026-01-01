@@ -14,7 +14,7 @@ class TimeBaseModel(Model):
 
 class User(AbstractUser):
     username = CharField(
-        verbose_name="Login",
+        verbose_name="Логин",
         max_length=150,
         unique=True,
         help_text="Обязательно. Не более 150 символов. Только буквы, цифры и символы @/./+/-/_.",
@@ -30,19 +30,19 @@ class User(AbstractUser):
 
 
 class Category(Model):
-    name = CharField(max_length=255)
+    name = CharField(max_length=255, verbose_name="Название")
 
     def __str__(self):
         return self.name
 
 
 class Product(TimeBaseModel):
-    name = CharField(max_length=255)
-    arrival_price = PositiveIntegerField()
-    sales_price = PositiveIntegerField()
-    kaspi_price = PositiveIntegerField()
-    category = ForeignKey("apps.Category", CASCADE)
-    quantity = PositiveIntegerField()
+    name = CharField(max_length=255, verbose_name="Название")
+    arrival_price = PositiveIntegerField(verbose_name="Цена прибытия")
+    sales_price = PositiveIntegerField(verbose_name="Цена продажи")
+    kaspi_price = PositiveIntegerField(verbose_name="Каспи цена")
+    category = ForeignKey("apps.Category", CASCADE, verbose_name="Категория")
+    quantity = PositiveIntegerField(verbose_name="Количество")
 
     def __str__(self):
         return self.name
@@ -50,18 +50,18 @@ class Product(TimeBaseModel):
 
 class Order(TimeBaseModel):
     PRICE_TYPE_CHOICES = (
-        ('sales', 'Sales price'),
-        ('kaspi', 'Kaspi price'),
+        ('sales', 'Цена продажи'),
+        ('kaspi', 'Каспи цена'),
     )
-    product = ForeignKey("apps.Product", CASCADE)
-    quantity = PositiveIntegerField()
-    deadline = DateTimeField()
+    product = ForeignKey("apps.Product", CASCADE, verbose_name="Продукт")
+    quantity = PositiveIntegerField(verbose_name="Количество")
+    deadline = DateTimeField(verbose_name="Срок")
     price_type = CharField(
         max_length=10,
         choices=PRICE_TYPE_CHOICES,
-        verbose_name="Price type"
+        verbose_name="Тип цены"
     )
-    price = PositiveIntegerField(editable=False)
+    price = PositiveIntegerField(editable=False, verbose_name="Цена")
 
     def __str__(self):
         return self.product.name
