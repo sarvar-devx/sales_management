@@ -32,6 +32,10 @@ class User(AbstractUser):
 class Category(Model):
     name = CharField(max_length=255, verbose_name="Название")
 
+    class Meta:
+        verbose_name = "Категория"
+        verbose_name_plural = "Категории"
+
     def __str__(self):
         return self.name
 
@@ -43,6 +47,10 @@ class Product(TimeBaseModel):
     kaspi_price = PositiveIntegerField(verbose_name="Каспи цена")
     category = ForeignKey("apps.Category", CASCADE, verbose_name="Категория")
     quantity = PositiveIntegerField(verbose_name="Количество")
+
+    class Meta:
+        verbose_name = "Продукт"
+        verbose_name_plural = "Продукты"
 
     def __str__(self):
         return self.name
@@ -62,6 +70,10 @@ class Order(TimeBaseModel):
         verbose_name="Тип цены"
     )
     price = PositiveIntegerField(editable=False, verbose_name="Цена")
+
+    class Meta:
+        verbose_name = "Заказ"
+        verbose_name_plural = "Заказы"
 
     def __str__(self):
         return self.product.name
