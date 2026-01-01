@@ -61,6 +61,10 @@ class Order(TimeBaseModel):
         ('sales', 'Цена продажи'),
         ('kaspi', 'Каспи цена'),
     )
+    STATUS_CHOICES = (
+        ('new', 'Новый'),
+        ('finished', 'Завершён'),
+    )
     product = ForeignKey("apps.Product", CASCADE, verbose_name="Продукт")
     quantity = PositiveIntegerField(verbose_name="Количество")
     deadline = DateTimeField(verbose_name="Срок")
@@ -70,6 +74,12 @@ class Order(TimeBaseModel):
         verbose_name="Тип цены"
     )
     price = PositiveIntegerField(editable=False, verbose_name="Цена")
+    status = CharField(
+        max_length=10,
+        choices=STATUS_CHOICES,
+        default='new',
+        verbose_name="Статус"
+    )
 
     class Meta:
         verbose_name = "Заказ"

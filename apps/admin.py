@@ -28,9 +28,11 @@ class ProductModelAdmin(ModelAdmin):
 @admin.register(Order)
 class OrderModelAdmin(ModelAdmin):
     model = Order
-    list_display = ('id', 'product', 'quantity', 'deadline', 'price_type', 'price')
+    list_display = ('id', 'product', 'quantity', 'deadline', 'price_type', 'price', 'status')
     list_display_links = ('id', 'product')
-    readonly_fields = ('price',)
+    readonly_fields = ('price', 'status',)
+    list_filter = ('status',)
+    actions = ['mark_as_finished']
 
     def save_model(self, request, obj, form, change):
         if obj.price_type == 'sales':
@@ -54,3 +56,9 @@ class OrderModelAdmin(ModelAdmin):
             return self.response_post_save_add(request, None)
 
         return super().response_add(request, obj, post_url_continue)
+
+    def mark_as_finished(self, request, queryset):
+        updated = queryset.update(status='finished')
+        self.message_user(request, f"{updated} заказ(ов) помечено как завершённые.")
+
+    mark_as_finished.short_description = "Пометить выбранные заказы как завершённые"
