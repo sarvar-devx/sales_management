@@ -21,7 +21,7 @@ class CategoryModelAdmin(ModelAdmin):
 @admin.register(Product)
 class ProductModelAdmin(ModelAdmin):
     model = Product
-    list_display = ('id', 'name', "quantity", "arrival_price", "sales_price", "kaspi_price", "category",)
+    list_display = ('id', 'name', "quantity", "category", "arrival_price", "sales_price", "kaspi_price")
     list_display_links = ('id', 'name')
 
 
@@ -31,7 +31,8 @@ class OrderModelAdmin(ModelAdmin):
     list_display = ('id', 'product', 'quantity', 'deadline', 'price_type', 'price', 'status')
     list_display_links = ('id', 'product')
     readonly_fields = ('price', 'status',)
-    list_filter = ('status',)
+    list_filter = ('product', 'price_type', 'status')
+    ordering = ('deadline',)
     actions = ['mark_as_finished']
 
     def save_model(self, request, obj, form, change):
