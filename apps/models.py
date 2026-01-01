@@ -62,8 +62,8 @@ class Order(TimeBaseModel):
         ('kaspi', 'Каспи цена'),
     )
     STATUS_CHOICES = (
-        ('new', 'Новый'),
-        ('finished', 'Завершён'),
+        ('new', 'Новый ✅'),
+        ('finished', 'Завершён ❌'),
     )
     product = ForeignKey("apps.Product", CASCADE, verbose_name="Продукт")
     quantity = PositiveIntegerField(verbose_name="Количество")
