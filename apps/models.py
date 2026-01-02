@@ -87,3 +87,17 @@ class Order(TimeBaseModel):
 
     def __str__(self):
         return self.product.name
+
+
+class Expense(Model):
+    product = ForeignKey(Product, CASCADE, verbose_name="Продукт")
+    quantity = PositiveIntegerField(verbose_name="Количество")
+    amount = PositiveIntegerField(verbose_name="Сумма")
+    date = DateTimeField(verbose_name="Дата")
+
+    class Meta:
+        verbose_name = "Расход"
+        verbose_name_plural = "Расходы"
+
+    def __str__(self):
+        return f"{self.product.name} — {self.amount}"

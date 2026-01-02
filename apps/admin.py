@@ -1,8 +1,8 @@
 from django.contrib import admin, messages
-from django.contrib.admin import ModelAdmin
+from django.contrib.admin import ModelAdmin, SimpleListFilter
 from django.contrib.auth.admin import UserAdmin
-
-from apps.models import User, Category, Product, Order
+from django.db.models.functions import TruncDate
+from apps.models import User, Category, Product, Order, Expense
 
 
 @admin.register(User)
@@ -23,6 +23,18 @@ class ProductModelAdmin(ModelAdmin):
     model = Product
     list_display = ('id', 'name', "quantity", "category", "arrival_price", "sales_price", "kaspi_price")
     list_display_links = ('id', 'name')
+
+    def save_model(self, request, obj, form, change):
+        is_new = obj.pk is None
+        super().save_model(request, obj, form, change)
+
+        if is_new:
+            Expense.objects.create(
+                product=obj,
+                quantity=obj.quantity,
+                amount=obj.arrival_price * obj.quantity,
+                date=obj.created_at
+            )
 
 
 @admin.register(Order)
@@ -63,3 +75,31 @@ class OrderModelAdmin(ModelAdmin):
         self.message_user(request, f"{updated} заказ(ов) помечено как завершённые.")
 
     mark_as_finished.short_description = "Пометить выбранные заказы как завершённые"
+
+
+class ExactDateFilter(SimpleListFilter):
+    title = 'Дата'
+    parameter_name = 'date'
+
+    def lookups(self, request, model_admin):
+        dates = (
+            Expense.objects
+            .annotate(day=TruncDate('date'))
+            .values_list('day', flat=True)
+            .distinct()
+            .order_by('day')
+        )
+        return [(d, d.strftime('%d.%m.%Y')) for d in dates]
+
+    def queryset(self, request, queryset):
+        if self.value():
+            return queryset.filter(date__date=self.value())
+        return queryset
+
+
+@admin.register(Expense)
+class ExpenseModelAdmin(ModelAdmin):
+    model = Expense
+    list_display = ('id', 'product', 'quantity', 'amount', 'date')
+    list_filter = (ExactDateFilter,)
+    ordering = ('-date',)
