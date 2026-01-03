@@ -1,6 +1,6 @@
 from django.contrib.auth.models import AbstractUser
 from django.contrib.auth.validators import UnicodeUsernameValidator as username_validator
-from django.db.models import Model, ForeignKey, CASCADE
+from django.db.models import Model, ForeignKey, CASCADE, DateField
 from django.db.models.fields import CharField, DateTimeField, PositiveIntegerField, EmailField
 
 
