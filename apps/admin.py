@@ -1,12 +1,15 @@
 from django.contrib import admin, messages
 from django.contrib.admin import ModelAdmin, SimpleListFilter
 from django.contrib.auth.admin import UserAdmin
+from django.utils import timezone
 from django.db.models.functions import TruncDate
 from django.http import HttpResponseRedirect
 from django.urls import path
 from django.utils.html import format_html
 
 from apps.models import User, Category, Product, Order, Expense
+from apps.models import User, Category, Product, Order, Expense, Report
+from .report import build_daily_report
 
 
 @admin.register(User)
@@ -41,52 +44,12 @@ class ProductModelAdmin(ModelAdmin):
             )
 
 
-# @admin.register(Order)
-# class OrderModelAdmin(ModelAdmin):
-#     model = Order
-#     list_display = ('id', 'product', 'quantity', 'deadline', 'price_type', 'price', 'status')
-#     list_display_links = ('id', 'product')
-#     readonly_fields = ('price', 'status',)
-#     list_filter = ('product', 'price_type', 'status')
-#     ordering = ('deadline',)
-#     actions = ['mark_as_finished']
-#
-#     def save_model(self, request, obj, form, change):
-#         if obj.price_type == 'sales':
-#             obj.price = obj.product.sales_price
-#         else:
-#             obj.price = obj.product.kaspi_price
-#
-#         if obj.quantity > obj.product.quantity:
-#             messages.warning(request,
-#                              f"Количество товара недостаточно! В настоящее время доступно {obj.product.quantity}. Количество не уменьшилось."
-#                              )
-#             self._order_not_created = True
-#             return
-#
-#         obj.product.quantity -= obj.quantity
-#         obj.product.save()
-#         super().save_model(request, obj, form, change)
-#
-#     def response_add(self, request, obj, post_url_continue=None):
-#         if getattr(self, '_order_not_created', False):
-#             return self.response_post_save_add(request, None)
-#
-#         return super().response_add(request, obj, post_url_continue)
-#
-#     def mark_as_finished(self, request, queryset):
-#         updated = queryset.update(status='finished')
-#         self.message_user(request, f"{updated} заказ(ов) помечено как завершённые.")
-#
-#     mark_as_finished.short_description = "Пометить выбранные заказы как завершённые"
-
-
 @admin.register(Order)
 class OrderModelAdmin(ModelAdmin):
     model = Order
     list_display = ('id', 'product', 'quantity', 'deadline', 'price_type', 'price', 'status', 'mark_finished_button')
     list_display_links = ('id', 'product')
-    readonly_fields = ('price', 'status',)
+    readonly_fields = ('price', 'status', 'finished_at')
     list_filter = ('product', 'price_type', 'status')
     ordering = ('deadline',)
     actions = ['mark_as_finished']
@@ -134,15 +97,24 @@ class OrderModelAdmin(ModelAdmin):
             obj.price = obj.product.kaspi_price
 
         if obj.quantity > obj.product.quantity:
-            messages.warning(request,
-                             f"Количество товара недостаточно! В настоящее время доступно {obj.product.quantity}. Количество не уменьшилось."
-                             )
+            messages.warning(
+                request,
+                f"Недостаточно товара. Доступно: {obj.product.quantity}"
+            )
             self._order_not_created = True
             return
 
-        obj.product.quantity -= obj.quantity
-        obj.product.save()
+        if not change:
+            obj.product.quantity -= obj.quantity
+            obj.product.save()
+
+        if obj.status == 'finished' and obj.finished_at is None:
+            obj.finished_at = timezone.now()
+
         super().save_model(request, obj, form, change)
+
+        if obj.status == 'finished':
+            build_daily_report(obj.finished_at.date())
 
     def response_add(self, request, obj, post_url_continue=None):
         if getattr(self, '_order_not_created', False):
@@ -182,4 +154,25 @@ class ExpenseModelAdmin(ModelAdmin):
     model = Expense
     list_display = ('id', 'product', 'quantity', 'amount', 'date')
     list_filter = (ExactDateFilter,)
+    ordering = ('-date',)
+
+
+class ReportDateFilter(SimpleListFilter):
+    title = 'Дата'
+    parameter_name = 'date'
+
+    def lookups(self, request, model_admin):
+        dates = Report.objects.values_list('date', flat=True).order_by('date')
+        return [(d, d.strftime('%d.%m.%Y')) for d in dates]
+
+    def queryset(self, request, queryset):
+        if self.value():
+            return queryset.filter(date=self.value())
+        return queryset
+
+
+@admin.register(Report)
+class ReportModelAdmin(ModelAdmin):
+    list_display = ('date', 'selling', 'benefit', 'expenses')
+    list_filter = (ReportDateFilter,)
     ordering = ('-date',)
