@@ -80,6 +80,11 @@ class Order(TimeBaseModel):
         default='new',
         verbose_name="Статус"
     )
+    finished_at = DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name="Дата завершения"
+    )
 
     class Meta:
         verbose_name = "Заказ"
@@ -101,3 +106,18 @@ class Expense(Model):
 
     def __str__(self):
         return f"{self.product.name} — {self.amount}"
+
+
+class Report(Model):
+    date = DateField(unique=True, verbose_name="Дата")
+    selling = PositiveIntegerField(default=0, verbose_name="Продажи")
+    benefit = PositiveIntegerField(default=0, verbose_name="Прибыль")
+    expenses = PositiveIntegerField(default=0, verbose_name="Расходы")
+
+    class Meta:
+        verbose_name = "Отчёт"
+        verbose_name_plural = "Отчёты"
+        ordering = ('-date',)
+
+    def __str__(self):
+        return f"Отчёт за {self.date.strftime('%d.%m.%Y')}"

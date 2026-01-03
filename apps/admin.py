@@ -1,8 +1,10 @@
 from django.contrib import admin, messages
 from django.contrib.admin import ModelAdmin, SimpleListFilter
 from django.contrib.auth.admin import UserAdmin
+from django.utils import timezone
 from django.db.models.functions import TruncDate
-from apps.models import User, Category, Product, Order, Expense
+from apps.models import User, Category, Product, Order, Expense, Report
+from .report import build_daily_report
 
 
 @admin.register(User)
@@ -42,10 +44,18 @@ class OrderModelAdmin(ModelAdmin):
     model = Order
     list_display = ('id', 'product', 'quantity', 'deadline', 'price_type', 'price', 'status')
     list_display_links = ('id', 'product')
-    readonly_fields = ('price', 'status',)
+    readonly_fields = ('price', 'status', 'finished_at')
     list_filter = ('product', 'price_type', 'status')
     ordering = ('deadline',)
     actions = ['mark_as_finished']
+
+    def get_fields(self, request, obj=None):
+        fields = super().get_fields(request, obj)
+
+        if obj is None and 'finished_at' in fields:
+            fields.remove('finished_at')
+
+        return fields
 
     def save_model(self, request, obj, form, change):
         if obj.price_type == 'sales':
@@ -54,15 +64,23 @@ class OrderModelAdmin(ModelAdmin):
             obj.price = obj.product.kaspi_price
 
         if obj.quantity > obj.product.quantity:
-            messages.warning(request,
-                             f"Количество товара недостаточно! В настоящее время доступно {obj.product.quantity}. Количество не уменьшилось."
-                             )
-            self._order_not_created = True
+            messages.warning(
+                request,
+                f"Недостаточно товара. Доступно: {obj.product.quantity}"
+            )
             return
 
-        obj.product.quantity -= obj.quantity
-        obj.product.save()
+        if not change:
+            obj.product.quantity -= obj.quantity
+            obj.product.save()
+
+        if obj.status == 'finished' and obj.finished_at is None:
+            obj.finished_at = timezone.now()
+
         super().save_model(request, obj, form, change)
+
+        if obj.status == 'finished':
+            build_daily_report(obj.finished_at.date())
 
     def response_add(self, request, obj, post_url_continue=None):
         if getattr(self, '_order_not_created', False):
@@ -71,10 +89,18 @@ class OrderModelAdmin(ModelAdmin):
         return super().response_add(request, obj, post_url_continue)
 
     def mark_as_finished(self, request, queryset):
-        updated = queryset.update(status='finished')
-        self.message_user(request, f"{updated} заказ(ов) помечено как завершённые.")
+        orders = queryset.filter(status='new')
 
-    mark_as_finished.short_description = "Пометить выбранные заказы как завершённые"
+        for order in orders:
+            order.status = 'finished'
+            order.finished_at = timezone.now()
+            order.save()
+
+            build_daily_report(order.finished_at.date())
+
+        self.message_user(request, f"{orders.count()} заказ(ов) завершено.")
+
+    mark_as_finished.short_description = "Пометить как завершённые"
 
 
 class ExactDateFilter(SimpleListFilter):
@@ -102,4 +128,25 @@ class ExpenseModelAdmin(ModelAdmin):
     model = Expense
     list_display = ('id', 'product', 'quantity', 'amount', 'date')
     list_filter = (ExactDateFilter,)
+    ordering = ('-date',)
+
+
+class ReportDateFilter(SimpleListFilter):
+    title = 'Дата'
+    parameter_name = 'date'
+
+    def lookups(self, request, model_admin):
+        dates = Report.objects.values_list('date', flat=True).order_by('date')
+        return [(d, d.strftime('%d.%m.%Y')) for d in dates]
+
+    def queryset(self, request, queryset):
+        if self.value():
+            return queryset.filter(date=self.value())
+        return queryset
+
+
+@admin.register(Report)
+class ReportModelAdmin(ModelAdmin):
+    list_display = ('date', 'selling', 'benefit', 'expenses')
+    list_filter = (ReportDateFilter,)
     ordering = ('-date',)
