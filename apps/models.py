@@ -1,7 +1,7 @@
 from django.contrib.auth.models import AbstractUser
 from django.contrib.auth.validators import UnicodeUsernameValidator as username_validator
 from django.db.models import Model, ForeignKey, CASCADE
-from django.db.models.fields import CharField, DateTimeField, PositiveIntegerField, EmailField, DateField
+from django.db.models.fields import CharField, DateTimeField, PositiveIntegerField, EmailField
 
 
 class TimeBaseModel(Model):
@@ -67,7 +67,7 @@ class Order(TimeBaseModel):
     )
     product = ForeignKey("apps.Product", CASCADE, verbose_name="Продукт")
     quantity = PositiveIntegerField(verbose_name="Количество")
-    deadline = DateField(verbose_name="Срок")
+    deadline = DateTimeField(verbose_name="Срок")
     price_type = CharField(
         max_length=10,
         choices=PRICE_TYPE_CHOICES,
