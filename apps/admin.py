@@ -91,6 +91,12 @@ class OrderModelAdmin(ModelAdmin):
     ordering = ('deadline',)
     actions = ['mark_as_finished']
 
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        if 'status__exact' not in request.GET:
+            return qs.filter(status='new')
+        return qs
+
     def mark_finished_button(self, obj):
         if obj.status != 'finished':
             return format_html(
