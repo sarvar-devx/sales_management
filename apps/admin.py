@@ -1,13 +1,12 @@
 from django.contrib import admin, messages
 from django.contrib.admin import ModelAdmin, SimpleListFilter
 from django.contrib.auth.admin import UserAdmin
-from django.utils import timezone
 from django.db.models.functions import TruncDate
 from django.http import HttpResponseRedirect
 from django.urls import path
+from django.utils import timezone
 from django.utils.html import format_html
 
-from apps.models import User, Category, Product, Order, Expense
 from apps.models import User, Category, Product, Order, Expense, Report
 from .report import build_daily_report
 
@@ -60,6 +59,14 @@ class OrderModelAdmin(ModelAdmin):
             return qs.filter(status='new')
         return qs
 
+    def get_fields(self, request, obj=None):
+        fields = super().get_fields(request, obj)
+
+        if obj is None and 'finished_at' in fields:
+            fields.remove('finished_at')
+
+        return fields
+
     def mark_finished_button(self, obj):
         if obj.status != 'finished':
             return format_html(
@@ -83,7 +90,9 @@ class OrderModelAdmin(ModelAdmin):
         try:
             order = Order.objects.get(id=order_id)
             order.status = 'finished'
+            order.finished_at = timezone.now()
             order.save()
+            build_daily_report(order.finished_at.date())
             messages.success(request, f'Заказ #{order.id} завершён.')
         except Order.DoesNotExist:
             messages.error(request, 'Заказ не найден.')
@@ -123,10 +132,18 @@ class OrderModelAdmin(ModelAdmin):
         return super().response_add(request, obj, post_url_continue)
 
     def mark_as_finished(self, request, queryset):
-        updated = queryset.update(status='finished')
-        self.message_user(request, f"{updated} заказ(ов) помечено как завершённые.")
+        orders = queryset.filter(status='new')
 
-    mark_as_finished.short_description = "Пометить выбранные заказы как завершённые"
+        for order in orders:
+            order.status = 'finished'
+            order.finished_at = timezone.now()
+            order.save()
+
+            build_daily_report(order.finished_at.date())
+
+        self.message_user(request, f"{orders.count()} заказ(ов) завершено.")
+
+    mark_as_finished.short_description = "Пометить как завершённые"
 
 
 class ExactDateFilter(SimpleListFilter):
